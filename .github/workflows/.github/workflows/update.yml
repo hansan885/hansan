@@ -1,0 +1,82 @@
+# 한산: 서울 실시간 혼잡도를 30분마다 받아서 GitHub Pages에 올려요.
+# 인증키는 저장소 Settings > Secrets and variables > Actions 에
+# SEOUL_API_KEY 라는 이름으로 넣어 두세요. (코드에는 절대 넣지 않기)
+name: 혼잡도 업데이트
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'   # 30분마다 (몇 분씩 늦어질 수 있어요)
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 혼잡도 받아오기
+        env:
+          SEOUL_API_KEY: ${{ secrets.SEOUL_API_KEY }}
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          cat > fetch.mjs <<'EOF'
+          import fs from 'node:fs';
+          const KEY = process.env.SEOUL_API_KEY;
+          const CODES = ['POI064','POI066','POI067','POI116','POI101','POI068','POI073','POI082','POI107',
+                         'POI091','POI103','POI094','POI093','POI095','POI092','POI120','POI096'];
+          if (!KEY) { console.log('SEOUL_API_KEY가 없어서 예시 데이터로 배포해요.'); process.exit(0); }
+          const num = (v) => { const n = parseInt(v, 10); return Number.isNaN(n) ? null : n; };
+          const out = { updatedAt: new Date().toISOString(), places: {} };
+          for (const cd of CODES) {
+            try {
+              const res = await fetch(`http://openapi.seoul.go.kr:8088/${KEY}/json/citydata_ppltn/1/5/${cd}`,
+                                      { signal: AbortSignal.timeout(20000) });
+              const body = await res.json();
+              const result = body?.RESULT ?? {};
+              const p = body?.['SeoulRtd.citydata_ppltn']?.[0];
+              if (!p) {
+                console.log(`${cd}: 데이터 없음 (${result['RESULT.CODE'] ?? result.CODE ?? res.status} ${result['RESULT.MESSAGE'] ?? result.MESSAGE ?? ''})`);
+                continue;
+              }
+              out.places[cd] = {
+                nm: p.AREA_NM, lvl: p.AREA_CONGEST_LVL, time: p.PPLTN_TIME,
+                min: num(p.AREA_PPLTN_MIN), max: num(p.AREA_PPLTN_MAX),
+                fcst: (Array.isArray(p.FCST_PPLTN) ? p.FCST_PPLTN : []).map((f) => ({
+                  time: f.FCST_TIME, lvl: f.FCST_CONGEST_LVL,
+                  min: num(f.FCST_PPLTN_MIN), max: num(f.FCST_PPLTN_MAX),
+                })),
+              };
+              console.log(`${cd} ${p.AREA_NM}: ${p.AREA_CONGEST_LVL}`);
+            } catch (e) {
+              console.log(`${cd}: 호출 실패 (${e.name} ${e.cause?.code ?? ''})`);
+            }
+            await new Promise((r) => setTimeout(r, 300));
+          }
+          const n = Object.keys(out.places).length;
+          if (n) fs.writeFileSync('_site/data.json', JSON.stringify(out));
+          console.log(`${n}/${CODES.length}곳 수집 완료`);
+          EOF
+          node fetch.mjs
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
