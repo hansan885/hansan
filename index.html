@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="지금 한산한 서울 데이트 장소를 시간대별로 찾아보세요. (테스트 버전)">
+<meta property="og:title" content="한산">
+<meta property="og:description" content="지금 한산한 서울 데이트 장소 찾기 · 테스트 버전">
+<meta property="og:type" content="website">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>한산</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-column phone app — brand, sticky "언제 만나요?" time picker, category filter, quietness-ranked list, bottom sheet with 12h forecast and couple reports */
+:root{
+  --bg:#F3F1F4;
+  --surface:#FFFFFF;
+  --surface-2:#EBE7ED;
+  --fg:#221D26;
+  --muted:#6B6271;
+  --line:#DCD5DF;
+  --accent:#7A3E62;
+  --accent-fg:#FFFFFF;
+  --accent-soft:#F0E1EA;
+  --lv1:#2F8A5B; --lv2:#C9A227; --lv3:#D9732E; --lv4:#C43D3D;
+  --lv1-soft:#E0F0E6; --lv2-soft:#F5EDD0; --lv3-soft:#FAE4D5; --lv4-soft:#F6DADA;
+  --lv1-ink:#1F6A41; --lv2-ink:#7A5E08; --lv3-ink:#A04A12; --lv4-ink:#9C2A2A;
+  --scrim:rgba(24,16,26,.45);
+  --display:'Hahmlet','Noto Serif KR','AppleMyungjo',serif;
+  --body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141117; --surface:#1D1922; --surface-2:#28232D; --fg:#EEE9F1; --muted:#A69DAC; --line:#352E3B;
+    --accent:#DBA3C4; --accent-fg:#2A1622; --accent-soft:#3A2433;
+    --lv1:#5BC189; --lv2:#E2C04C; --lv3:#F0935A; --lv4:#EE7070;
+    --lv1-soft:#16301F; --lv2-soft:#352C0F; --lv3-soft:#3B2214; --lv4-soft:#3D1A1C;
+    --lv1-ink:#7DD6A4; --lv2-ink:#EBCF6E; --lv3-ink:#F5AA7C; --lv4-ink:#F49292;
+    --scrim:rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141117; --surface:#1D1922; --surface-2:#28232D; --fg:#EEE9F1; --muted:#A69DAC; --line:#352E3B;
+  --accent:#DBA3C4; --accent-fg:#2A1622; --accent-soft:#3A2433;
+  --lv1:#5BC189; --lv2:#E2C04C; --lv3:#F0935A; --lv4:#EE7070;
+  --lv1-soft:#16301F; --lv2-soft:#352C0F; --lv3-soft:#3B2214; --lv4-soft:#3D1A1C;
+  --lv1-ink:#7DD6A4; --lv2-ink:#EBCF6E; --lv3-ink:#F5AA7C; --lv4-ink:#F49292;
+  --scrim:rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html.locked,html.locked body{overflow:hidden}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+
+.app{
+  max-width:520px;margin:0 auto;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:20px 40px;
+  display:flex;flex-direction:column;gap:14px;
+}
+
+/* brand */
+.brand{display:flex;flex-direction:column;gap:4px}
+.brand-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-family:var(--display);font-weight:700;font-size:34px;line-height:1.1;letter-spacing:-0.02em;margin:0}
+.logo em{font-style:normal;color:var(--accent)}
+.demo-badge.live{background:var(--lv1-soft);color:var(--lv1-ink)}
+.demo-badge{font-size:12px;font-weight:600;letter-spacing:.02em;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.tagline{margin:0;color:var(--muted);font-size:14px}
+
+/* who */
+.who{display:flex;flex-direction:column;gap:8px}
+.seg-ctl{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--surface-2)}
+.seg-btn{font:inherit;font-size:14px;font-weight:500;padding:8px 2px;border:0;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg-btn[aria-pressed="true"]{background:var(--surface);color:var(--fg);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+
+/* time picker */
+.timebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.label{margin:0;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.chips{position:relative;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-block:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font:inherit;font-size:14px;font-weight:500;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;white-space:nowrap}
+.chip.time[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.chip.cat{padding:6px 12px;font-size:13px}
+.chip.cat[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+
+/* summary */
+.summary{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 12px}
+.when{margin:0;font-size:14px;font-weight:600}
+.counts{margin:0;font-size:14px;color:var(--muted)}
+.counts b{color:var(--fg);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);width:100%}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* list */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.card{
+  width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;
+  display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:4px 12px;align-items:start;
+}
+.card:hover{border-color:var(--muted)}
+.rank{font-family:var(--display);font-size:19px;font-weight:700;line-height:1.35;color:var(--muted);font-variant-numeric:tabular-nums}
+.rank.top{color:var(--accent)}
+.card-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.card-title{font-family:var(--display);font-size:18px;font-weight:700;line-height:1.35}
+.card-meta{font-size:13px;color:var(--muted)}
+.card-best{font-size:13px}
+.card-best strong{color:var(--accent);font-weight:600}
+.card-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;padding-top:2px}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.lv1{background:var(--lv1-soft);color:var(--lv1-ink)}
+.pill.lv2{background:var(--lv2-soft);color:var(--lv2-ink)}
+.pill.lv3{background:var(--lv3-soft);color:var(--lv3-ink)}
+.pill.lv4{background:var(--lv4-soft);color:var(--lv4-ink)}
+.pop{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.strip{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;max-width:240px;margin-block:6px 2px}
+.seg{height:8px;border-radius:2px}
+.seg.sel{outline:2px solid var(--fg);outline-offset:1px}
+.lv1.seg,.lv1.bar,.legend .lv1{background:var(--lv1)}
+.lv2.seg,.lv2.bar,.legend .lv2{background:var(--lv2)}
+.lv3.seg,.lv3.bar,.legend .lv3{background:var(--lv3)}
+.lv4.seg,.lv4.bar,.legend .lv4{background:var(--lv4)}
+.lv0.seg,.lv0.bar{background:var(--line)}
+.pill.lv0{background:var(--surface-2);color:var(--muted)}
+
+/* about */
+.about{margin-top:10px;padding:16px;border-radius:14px;border:1px dashed var(--line);font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.about h2{margin:0;font-size:14px;color:var(--fg)}
+.about p{margin:0;max-width:62ch}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;z-index:21;
+  max-height:88vh;max-height:88dvh;overflow-y:auto;overscroll-behavior:contain;
+  background:var(--surface);border-radius:20px 20px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.18);
+  padding-left:max(18px, env(safe-area-inset-left,0px));
+  padding-right:max(18px, env(safe-area-inset-right,0px));
+  padding-top:10px;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:14px;
+}
+.sheet:not([hidden]){animation:rise .26s ease-out}
+.scrim:not([hidden]){animation:fade .2s ease-out}
+@keyframes rise{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.grabber{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.sheet-headings{min-width:0}
+.sheet-title{font-family:var(--display);font-size:24px;font-weight:700;line-height:1.25;margin:0;text-wrap:balance}
+.sheet-meta{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.close{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer;display:grid;place-items:center}
+.close svg{width:14px;height:14px}
+.sheet-body{display:flex;flex-direction:column;gap:18px}
+.mood{margin:0}
+.status{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 14px;border-radius:12px;background:var(--surface-2)}
+.status .pill{font-size:14px;padding:5px 12px}
+.status-text{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.sec-title{margin:0;font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.hint{font-size:12px;color:var(--muted)}
+.chart{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));grid-template-rows:136px;gap:4px;align-items:end;border-bottom:1px solid var(--line)}
+.bar-btn{appearance:none;border:0;background:none;padding:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;cursor:pointer;border-radius:4px}
+.bar{display:block;border-radius:4px 4px 1px 1px;min-height:4px}
+.bar-btn[aria-pressed="true"] .bar{outline:2px solid var(--fg);outline-offset:2px}
+.ticks{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;margin-top:-4px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ticks span{text-align:center;white-space:nowrap}
+.reco{margin:0}
+.reco strong{color:var(--accent);font-weight:600}
+.reports{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.report{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.report.empty{color:var(--muted)}
+.rdot{flex:none;width:8px;height:8px;border-radius:50%;margin-top:7px}
+.rdot.quiet{background:var(--lv1)}
+.rdot.busy{background:var(--lv4)}
+.rtext{display:flex;flex-direction:column}
+.rtext small{font-size:12px;color:var(--muted)}
+.report-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btn.seat{background:var(--accent-soft);color:var(--accent)}
+.rdot.seat{background:var(--accent)}
+.empty-state{padding:24px 16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px;font-size:14px}
+.btn{font:inherit;font-size:14px;font-weight:600;padding:11px 10px;border-radius:12px;border:1px solid transparent;cursor:pointer}
+.btn.quiet{background:var(--lv1-soft);color:var(--lv1-ink)}
+.btn.busy{background:var(--lv4-soft);color:var(--lv4-ink)}
+.note{margin:0;font-size:12px;color:var(--muted)}
+
+/* test banner + feedback */
+.test-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:13px}
+.banner-link{flex:none;font-size:13px;font-weight:600;background:var(--accent);color:var(--accent-fg);padding:7px 12px;border-radius:999px;white-space:nowrap;text-decoration:none}
+a.submit{display:block;text-align:center;text-decoration:none}
+.feedback{scroll-margin-top:130px;margin-top:6px;padding:18px 16px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:18px}
+.fb-head{display:flex;flex-direction:column;gap:4px}
+.fb-head h2{font-family:var(--display);font-size:21px;font-weight:700;line-height:1.3;margin:0}
+.fb-note{margin:0;font-size:13px;color:var(--muted)}
+.q{display:flex;flex-direction:column;gap:8px;border:0;margin:0;padding:0;min-width:0}
+.qt{font-size:14px;font-weight:600;padding:0}
+fieldset.q legend{margin-bottom:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;width:1px;height:1px}
+.opt span{display:inline-block;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);font-size:14px;cursor:pointer}
+.opt input:checked + span{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.opt input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.feedback textarea{width:100%;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);resize:vertical}
+.feedback textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.submit{font:inherit;font-size:15px;font-weight:600;padding:13px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-fg);cursor:pointer}
+.copybox{font-size:14px!important;color:var(--muted)!important}
+
+.submit:focus-visible,.banner-link:focus-visible,.seg-btn:focus-visible,.chip:focus-visible,.card:focus-visible,.close:focus-visible,.bar-btn:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){
+  .sheet:not([hidden]),.scrim:not([hidden]){animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="brand">
+    <div class="brand-row">
+      <h1 class="logo">한산<em>.</em></h1>
+      <span class="demo-badge" id="dataBadge">예시 데이터</span>
+    </div>
+    <p class="tagline" id="tagline">둘이 걷기 좋은, 지금 한산한 곳</p>
+  </header>
+
+  <div class="test-banner">
+    <span>테스트 버전이에요. 써보고 의견을 보내 주세요.</span>
+    <a class="banner-link" href="https://forms.gle/vRFNRaW2kLthSKKo6" target="_blank" rel="noopener">설문 참여하기</a>
+  </div>
+
+  <div class="who">
+    <p class="label" id="whoLabel">누구랑 가요?</p>
+    <div class="seg-ctl" id="whoCtl" role="group" aria-labelledby="whoLabel"></div>
+  </div>
+
+  <div class="timebar">
+    <p class="label" id="timeLabel">언제 가요?</p>
+    <div class="chips" id="timeChips" role="group" aria-labelledby="timeLabel"></div>
+  </div>
+
+  <div class="chips" id="catChips" role="group" aria-label="장소 종류"></div>
+
+  <div class="summary">
+    <p class="when" id="when"></p>
+    <p class="counts" id="counts"></p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="lv1"></i>여유</span>
+      <span><i class="lv2"></i>보통</span>
+      <span><i class="lv3"></i>약간 붐빔</span>
+      <span><i class="lv4"></i>붐빔</span>
+      <span>· 한 칸 = 1시간</span>
+    </div>
+  </div>
+
+  <ol class="list" id="list"></ol>
+
+  <section class="feedback" id="feedback">
+    <div class="fb-head">
+      <h2>써보니 어때요?</h2>
+      <p class="fb-note">짧은 설문이에요. 남겨 주신 의견은 앱을 고치는 데 바로 써요.</p>
+    </div>
+    <a class="submit" href="https://forms.gle/vRFNRaW2kLthSKKo6" target="_blank" rel="noopener">설문 참여하기</a>
+    <p class="fb-note">구글 설문이 새 창으로 열려요.</p>
+  </section>
+
+  <section class="about">
+    <h2>숫자는 어디서 오나요</h2>
+    <p>혼잡도는 서울시 열린데이터광장의 '서울 실시간 도시데이터'를 30분마다 받아와요. 통신사 데이터로 추정한 값이고, 평소(최근 4주)와 비교한 혼잡 정도예요. 위 배지가 '예시 데이터'로 보이면 아직 연결 전이라 시간대 패턴으로 만든 예시 숫자예요.</p>
+    <p>추천 시간은 오전 10시부터 밤 10시 사이에서 골라요. 현장 제보는 공공 데이터가 잡지 못하는 골목 카페나 벤치 같은 작은 장소를 채워요. 장소별 동행 정보(반려견 동반 등)도 예시라 실제 서비스에선 확인이 필요해요.</p>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="grabber" aria-hidden="true"></div>
+  <div class="sheet-head">
+    <div class="sheet-headings">
+      <h2 class="sheet-title" id="sheetTitle"></h2>
+      <p class="sheet-meta" id="sheetMeta"></p>
+    </div>
+    <button type="button" class="close" id="sheetClose" aria-label="닫기">
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+    </button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+</section>
+
+<script>
+(function(){
+  // 예시 데이터용 시간대별 혼잡 패턴 (0~23시, 0~100)
+  var PROFILES = {
+    park:    [5,3,2,2,2,4,10,18,22,28,38,50,58,64,70,72,68,58,48,40,32,22,14,8],
+    hangang: [10,6,4,3,3,5,12,16,18,22,28,38,48,56,64,72,78,82,84,80,70,55,35,18],
+    cafe:    [4,2,1,1,1,2,4,8,14,22,35,52,66,74,80,82,78,70,60,52,42,28,14,8],
+    heritage:[2,1,1,1,1,2,6,14,26,44,62,74,80,82,80,72,60,44,30,24,18,10,5,3],
+    view:    [6,3,2,2,2,4,8,12,16,20,26,32,38,42,46,52,60,72,82,84,74,56,34,14]
+  };
+  // cd = 서울 실시간 도시데이터 장소 코드
+  var PLACES = [
+    {id:1,  cd:'POI064', name:'덕수궁길·정동길', gu:'중구', cats:['고궁·한옥','산책'], p:'heritage', f:.72, cap:9000, mood:'돌담길 따라 천천히 걷는 코스. 해가 지면 관광객이 빠져서 저녁 산책으로 좋아요.'},
+    {id:2,  cd:'POI066', name:'북촌한옥마을', gu:'종로구', cats:['고궁·한옥'], p:'heritage', f:1.0, cap:12000, mood:'한옥 골목과 전망 포인트. 낮에는 관광객이 몰리는 편이에요.'},
+    {id:3,  cd:'POI067', name:'서촌', gu:'종로구', cats:['고궁·한옥','카페거리'], p:'heritage', f:.66, cap:8000, mood:'골목 카페와 작은 서점이 모여 있어요. 북촌보다 한결 조용해요.'},
+    {id:4,  cd:'POI116', name:'익선동', gu:'종로구', cats:['카페거리','고궁·한옥'], p:'cafe', f:1.05, cap:9000, mood:'한옥을 고친 카페와 식당 골목. 길이 좁아서 조금만 붐벼도 답답해요.'},
+    {id:5,  cd:'POI101', name:'서울숲공원', gu:'성동구', cats:['산책'], p:'park', f:.95, cap:15000, mood:'넓은 잔디밭과 숲길. 성수에서 밥 먹고 넘어오기 좋아요.'},
+    {id:6,  cd:'POI068', name:'성수카페거리', gu:'성동구', cats:['카페거리'], p:'cafe', f:1.1, cap:18000, mood:'팝업과 카페가 모인 곳. 주말 오후엔 줄 서는 가게가 많아요.'},
+    {id:7,  cd:'POI073', name:'연남동', gu:'마포구', cats:['카페거리','산책'], p:'cafe', f:1.0, cap:16000, mood:'경의선숲길 따라 카페가 이어져요. 저녁엔 숲길 쪽이 덜 붐벼요.'},
+    {id:8,  cd:'POI082', name:'해방촌·경리단길', gu:'용산구', cats:['카페거리','야경'], p:'cafe', f:.7, cap:8000, mood:'언덕 위 루프탑에서 남산타워가 보여요.'},
+    {id:9,  cd:'POI107', name:'응봉산', gu:'성동구', cats:['야경','산책'], p:'view', f:.5, cap:3000, mood:'한강과 서울숲, 성수대교 야경이 한눈에 보이는 작은 산. 정상까지 금방 올라가요.'},
+    {id:10, cd:'POI091', name:'남산공원', gu:'중구', cats:['야경','산책'], p:'view', f:.9, cap:14000, mood:'남산 둘레길과 서울타워. 해 질 무렵부터 사람이 늘어요.'},
+    {id:11, cd:'POI103', name:'양화한강공원', gu:'영등포구', cats:['한강','산책'], p:'hangang', f:.65, cap:8000, mood:'선유도공원과 이어진 한강공원. 양화대교 쪽 노을이 좋아요.'},
+    {id:12, cd:'POI094', name:'망원한강공원', gu:'마포구', cats:['한강'], p:'hangang', f:.85, cap:12000, mood:'망원시장에서 먹을 걸 사 들고 가기 좋아요.'},
+    {id:13, cd:'POI093', name:'뚝섬한강공원', gu:'광진구', cats:['한강'], p:'hangang', f:1.0, cap:16000, mood:'자벌레 전망대와 넓은 수변. 저녁 피크닉 인파가 많아요.'},
+    {id:14, cd:'POI095', name:'반포한강공원', gu:'서초구', cats:['한강','야경'], p:'hangang', f:1.1, cap:20000, mood:'세빛섬 야경으로 유명해서 저녁엔 꽤 붐벼요.'},
+    {id:15, cd:'POI092', name:'노들섬', gu:'용산구', cats:['한강','야경'], p:'hangang', f:.6, cap:6000, mood:'한강 한가운데 섬. 잔디마당에서 노을 보기 좋아요.'},
+    {id:16, cd:'POI120', name:'석촌호수', gu:'송파구', cats:['산책','야경'], p:'hangang', f:.95, cap:14000, mood:'호수 따라 한 바퀴 걷는 코스. 롯데타워 야경이 보여요.'},
+    {id:17, cd:'POI096', name:'북서울꿈의숲', gu:'강북구', cats:['산책'], p:'park', f:.55, cap:8000, mood:'강북의 큰 숲 공원. 주말에도 비교적 여유로워요.'}
+  ];
+  // 누구랑 가기 좋은지 (예시)
+  var WHO_TAGS = {
+    1:['couple','solo'], 2:['couple','friends'], 3:['couple','solo','friends'], 4:['couple','friends'],
+    5:['couple','family','dog','solo'], 6:['couple','friends'], 7:['couple','friends','dog'], 8:['couple','friends'],
+    9:['couple','solo'], 10:['couple','family','solo'], 11:['couple','solo','family','dog'], 12:['couple','friends','dog','family'],
+    13:['couple','friends','family','dog'], 14:['couple','friends','family','dog'], 15:['couple','solo','friends'],
+    16:['couple','family','dog'], 17:['couple','family','solo']
+  };
+  PLACES.forEach(function(p){ p.who = WHO_TAGS[p.id] || ['couple']; });
+  var WHO = [
+    {key:'couple',  name:'연인',   line:'둘이 걷기 좋은, 지금 한산한 곳'},
+    {key:'friends', name:'친구',   line:'줄 안 서고 놀기 좋은 곳'},
+    {key:'solo',    name:'혼자',   line:'조용히 걷고 쉬기 좋은 곳'},
+    {key:'family',  name:'가족',   line:'아이랑 여유 있게 놀기 좋은 곳'},
+    {key:'dog',     name:'반려견', line:'강아지와 느긋하게 걷기 좋은 곳'}
+  ];
+  var REPORT_TYPES = {
+    quiet:{label:'조용해요',   text:'지금 조용해요'},
+    seat: {label:'자리 있어요', text:'앉을 자리 있어요'},
+    busy: {label:'붐벼요',     text:'지금 붐벼요'}
+  };
+  var CATS = ['전체','산책','카페거리','한강','야경','고궁·한옥'];
+  var LEVELS = [
+    {key:1, name:'여유', max:30},
+    {key:2, name:'보통', max:50},
+    {key:3, name:'약간 붐빔', max:70},
+    {key:4, name:'붐빔', max:Infinity}
+  ];
+  var NO_DATA = {key:0, name:'정보 없음'};
+  var LEVEL_BY_NAME = {'여유':1, '보통':2, '약간 붐빔':3, '붐빔':4};
+  var LEVEL_BASE = {1:15, 2:40, 3:60, 4:85};
+  var SEED = {
+    5:[{type:'seat', text:'벤치 자리 넉넉해요', mins:12}],
+    6:[{type:'busy', text:'팝업스토어 앞 줄이 길어요', mins:5}],
+    7:[{type:'quiet', text:'숲길 끝쪽은 한산해요', mins:40}],
+    9:[{type:'quiet', text:'팔각정 뒤쪽은 사람이 거의 없어요', mins:25}],
+    14:[{type:'busy', text:'세빛섬 앞은 돗자리 펼 자리가 없어요', mins:8}],
+    16:[{type:'seat', text:'동호 쪽 벤치 비어 있어요', mins:18}]
+  };
+  var KEY = 'hansan.reports.v1';
+  var WHO_KEY = 'hansan.who.v1';
+  var NOW = new Date();
+  var DAYS = ['일','월','화','수','목','금','토'];
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var LIVE = null; // 실시간 데이터가 들어오면 { byId, time }
+
+  var mine = {};
+  try {
+    var raw = localStorage.getItem(KEY);
+    mine = raw ? JSON.parse(raw) : {};
+    if (!mine || typeof mine !== 'object') mine = {};
+  } catch (e) { mine = {}; }
+  function saveMine(){ try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch (e) {} }
+
+  var state = { t:0, cat:'전체', who:'couple', open:null, lastId:null };
+  try {
+    var savedWho = localStorage.getItem(WHO_KEY);
+    if (WHO.some(function(w){ return w.key === savedWho; })) state.who = savedWho;
+  } catch (e) {}
+  function $(s){ return document.querySelector(s); }
+  function fmt(n){ return n.toLocaleString('ko-KR'); }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+
+  function dateAt(o){ return new Date(NOW.getTime() + o * 3600000); }
+  function hourKey(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()); }
+  function hourLabel(h){
+    if (h === 0) return '밤 12시';
+    if (h < 6) return '새벽 ' + h + '시';
+    if (h < 12) return '오전 ' + h + '시';
+    if (h === 12) return '낮 12시';
+    if (h < 18) return '오후 ' + (h - 12) + '시';
+    if (h < 21) return '저녁 ' + (h - 12) + '시';
+    return '밤 ' + (h - 12) + '시';
+  }
+  function timeName(o){ return o === 0 ? '지금' : hourLabel(dateAt(o).getHours()); }
+  function batchim(w){
+    var c = w.charCodeAt(w.length - 1);
+    return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 !== 0;
+  }
+  function iga(w){ return w + (batchim(w) ? '이' : '가'); }
+  function withWho(w){
+    if (w.key === 'solo') return '혼자 가기 좋은';
+    return w.name + (batchim(w.name) ? '이랑' : '랑') + ' 가기 좋은';
+  }
+
+  // 혼잡 점수: 실시간 데이터가 있으면 그걸, 없으면 예시 패턴을 쓴다. 정보가 없으면 null
+  function point(p, o){
+    if (!LIVE) return null;
+    var pts = LIVE.byId[p.id];
+    return pts ? pts[o] : null;
+  }
+  function score(p, o){
+    if (LIVE) { var x = point(p, o); return x ? x.s : null; }
+    var d = dateAt(o), h = d.getHours();
+    var wk = (d.getDay() === 0 || d.getDay() === 6) ? 1.15 : 0.9;
+    var jitter = ((p.id * 37 + h * 11) % 7) - 3;
+    return Math.max(2, Math.min(100, Math.round(PROFILES[p.p][h] * p.f * wk + jitter)));
+  }
+  function level(s){
+    if (s == null) return NO_DATA;
+    for (var i = 0; i < LEVELS.length; i++) if (s < LEVELS[i].max) return LEVELS[i];
+    return LEVELS[3];
+  }
+  function inDateHours(o){ var h = dateAt(o).getHours(); return h >= 10 && h <= 22; }
+  function bestOffset(p){
+    var b = -1, bs = Infinity;
+    for (var o = 0; o <= 12; o++) {
+      if (!inDateHours(o)) continue;
+      var s = score(p, o);
+      if (s != null && s < bs) { bs = s; b = o; }
+    }
+    return b < 0 ? 0 : b;
+  }
+  function popRange(p, o){
+    var lo, hi;
+    if (LIVE) {
+      var x = point(p, o);
+      if (!x || x.min == null) return '정보 없음';
+      lo = x.min; hi = x.max != null ? x.max : x.min;
+    } else {
+      var pop = p.cap * score(p, o) / 100;
+      if (pop < 100) return '100명 미만';
+      var r = function(n){ return Math.max(100, Math.round(n / 100) * 100); };
+      lo = r(pop * 0.9); hi = r(pop * 1.1);
+    }
+    return lo === hi ? '약 ' + fmt(lo) + '명' : fmt(lo) + '~' + fmt(hi) + '명';
+  }
+  function agoText(m){ return m < 1 ? '방금' : m < 60 ? m + '분 전' : Math.floor(m / 60) + '시간 전'; }
+  function reportsFor(id){
+    var own = (mine[id] || []).slice().reverse().map(function(r){
+      return { type:r.type, text: (REPORT_TYPES[r.type] || REPORT_TYPES.quiet).text,
+               mins: Math.max(0, Math.round((Date.now() - r.ts) / 60000)), own:true };
+    });
+    return own.concat(SEED[id] || []);
+  }
+
+  // 실시간 데이터(data.json) → 장소별 13개 시점(지금 + 12시간)
+  function toNum(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+  function buildLive(data){
+    if (!data || !data.places) return null;
+    var byId = {}, count = 0, latest = '';
+    PLACES.forEach(function(p){
+      var d = data.places[p.cd];
+      if (!d) return;
+      var fc = {};
+      (d.fcst || []).forEach(function(f){ if (f && f.time) fc[String(f.time).slice(0, 13)] = f; });
+      var pts = [];
+      for (var o = 0; o <= 12; o++) {
+        var src = o === 0 ? d : fc[hourKey(dateAt(o))];
+        var k = src ? LEVEL_BY_NAME[src.lvl] : 0;
+        pts.push(k ? { k:k, min: toNum(src.min), max: toNum(src.max) } : null);
+      }
+      var mids = pts.filter(function(x){ return x && x.min != null; }).map(function(x){ return (x.min + (x.max != null ? x.max : x.min)) / 2; });
+      var lo = mids.length ? Math.min.apply(null, mids) : 0, hi = mids.length ? Math.max.apply(null, mids) : 0;
+      byId[p.id] = pts.map(function(x){
+        if (!x) return null;
+        var mid = x.min != null ? (x.min + (x.max != null ? x.max : x.min)) / 2 : lo;
+        x.s = LEVEL_BASE[x.k] + (hi > lo ? Math.round(9 * (mid - lo) / (hi - lo)) : 0);
+        return x;
+      });
+      count++;
+      if (d.time && String(d.time) > latest) latest = String(d.time);
+    });
+    return count ? { byId: byId, time: latest } : null;
+  }
+
+  var timeWrap = $('#timeChips'), catWrap = $('#catChips'), list = $('#list'), whoCtl = $('#whoCtl');
+  WHO.forEach(function(w){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'seg-btn'; b.id = 'w-' + w.key;
+    b.setAttribute('data-who', w.key); b.textContent = w.name;
+    whoCtl.appendChild(b);
+  });
+  whoCtl.addEventListener('click', function(e){
+    var b = e.target.closest('[data-who]'); if (!b) return;
+    state.who = b.getAttribute('data-who');
+    try { localStorage.setItem(WHO_KEY, state.who); } catch (err) {}
+    render();
+  });
+  for (var o = 0; o <= 12; o++) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip time'; b.id = 't' + o;
+    b.setAttribute('data-offset', o); b.textContent = timeName(o);
+    timeWrap.appendChild(b);
+  }
+  CATS.forEach(function(c, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip cat'; b.id = 'c' + i;
+    b.setAttribute('data-cat', c); b.textContent = c;
+    catWrap.appendChild(b);
+  });
+  timeWrap.addEventListener('click', function(e){
+    var b = e.target.closest('[data-offset]'); if (b) setTime(+b.getAttribute('data-offset'));
+  });
+  catWrap.addEventListener('click', function(e){
+    var b = e.target.closest('[data-cat]'); if (!b) return;
+    state.cat = b.getAttribute('data-cat'); render();
+  });
+
+  function cardHTML(it, i){
+    var p = it.p, s = it.s, lv = level(s), bo = bestOffset(p), bs = score(p, bo);
+    var segs = '';
+    for (var o = 0; o <= 12; o++) segs += '<span class="seg lv' + level(score(p, o)).key + (o === state.t ? ' sel' : '') + '"></span>';
+    var rc = reportsFor(p.id).length;
+    var best;
+    if (bs == null) best = '혼잡도 정보를 아직 받지 못했어요';
+    else if (bo === state.t) best = '고른 시간이 추천 시간이에요';
+    else best = '추천 시간 <strong>' + timeName(bo) + '</strong> · ' + level(bs).name;
+    return '<li><button type="button" class="card" data-id="' + p.id + '" id="card' + p.id + '">' +
+      '<span class="rank' + (i === 0 ? ' top' : '') + '">' + (i + 1) + '</span>' +
+      '<span class="card-main">' +
+        '<span class="card-title">' + p.name + '</span>' +
+        '<span class="card-meta">' + p.gu + ' · ' + p.cats.join(' · ') + (rc ? ' · 제보 ' + rc : '') + '</span>' +
+        '<span class="strip" aria-hidden="true">' + segs + '</span>' +
+        '<span class="card-best">' + best + '</span>' +
+      '</span>' +
+      '<span class="card-side"><span class="pill lv' + lv.key + '">' + lv.name + '</span><span class="pop">' + popRange(p, state.t) + '</span></span>' +
+    '</button></li>';
+  }
+
+  function render(){
+    whoCtl.querySelectorAll('.seg-btn').forEach(function(c){ c.setAttribute('aria-pressed', String(c.getAttribute('data-who') === state.who)); });
+    timeWrap.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', String(+c.getAttribute('data-offset') === state.t)); });
+    catWrap.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', String(c.getAttribute('data-cat') === state.cat)); });
+    var who = WHO.filter(function(w){ return w.key === state.who; })[0] || WHO[0];
+    $('#tagline').textContent = who.line;
+    var badge = $('#dataBadge');
+    if (LIVE) { badge.textContent = '실시간 · ' + (LIVE.time.slice(11, 16) || '') + ' 기준'; badge.classList.add('live'); }
+    else { badge.textContent = '예시 데이터'; badge.classList.remove('live'); }
+    var d = dateAt(state.t);
+    var items = PLACES
+      .filter(function(p){ return p.who.indexOf(state.who) > -1; })
+      .filter(function(p){ return state.cat === '전체' || p.cats.indexOf(state.cat) > -1; })
+      .map(function(p){ return { p:p, s:score(p, state.t) }; })
+      .sort(function(a, b){
+        var as = a.s == null ? 999 : a.s, bs = b.s == null ? 999 : b.s;
+        return as - bs || a.p.id - b.p.id;
+      });
+    var n1 = items.filter(function(i){ return level(i.s).key === 1; }).length;
+    var n4 = items.filter(function(i){ return level(i.s).key === 4; }).length;
+    var weekend = d.getDay() === 0 || d.getDay() === 6;
+    $('#when').textContent = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 (' + DAYS[d.getDay()] + ') ' + hourLabel(d.getHours()) + ' 기준' + (weekend ? ' · 주말' : '');
+    $('#counts').innerHTML = '여유 <b>' + n1 + '</b>곳 · 붐빔 <b>' + n4 + '</b>곳';
+    list.innerHTML = items.length
+      ? items.map(cardHTML).join('')
+      : '<li class="empty-state">' + withWho(who) + ' ' + state.cat + ' 장소는 아직 없어요. 다른 종류를 골라 보세요.</li>';
+  }
+
+  function renderSheet(){
+    var p = PLACES.filter(function(x){ return x.id === state.open; })[0];
+    if (!p) return;
+    var s = score(p, state.t), lv = level(s), bo = bestOffset(p), sb = score(p, bo);
+    var reco;
+    if (s == null) {
+      reco = '이 시간대 혼잡도 정보가 아직 없어요.';
+    } else if (bo === state.t || sb == null) {
+      reco = iga(timeName(state.t)) + ' 데이트하기 좋은 시간 중 가장 한산해요.';
+    } else if (sb >= s) {
+      reco = iga(timeName(state.t)) + ' 더 한산해요. 오전 10시~밤 10시 중에선 <strong>' + iga(timeName(bo)) + '</strong> 가장 여유로워요.';
+    } else {
+      var pct = Math.round((1 - sb / s) * 100);
+      reco = pct < 8
+        ? '<strong>' + iga(timeName(bo)) + '</strong> 조금 더 한산하지만 큰 차이는 없어요.'
+        : '<strong>' + timeName(bo) + '</strong>에 가면 ' + timeName(state.t) + '보다 확실히 여유로워요.';
+    }
+    var bars = '', ticks = '';
+    for (var o = 0; o <= 12; o++) {
+      var so = score(p, o), l = level(so);
+      var hgt = so == null ? 4 : Math.max(4, Math.round(so * 1.3));
+      bars += '<button type="button" class="bar-btn" id="bar' + o + '" data-offset="' + o + '" aria-pressed="' + (o === state.t) + '" aria-label="' + timeName(o) + ', ' + l.name + '">' +
+              '<span class="bar lv' + l.key + '" style="height:' + hgt + 'px"></span></button>';
+      ticks += '<span>' + (o % 3 === 0 ? dateAt(o).getHours() + '시' : '') + '</span>';
+    }
+    var reps = reportsFor(p.id);
+    var repHTML = reps.length
+      ? reps.map(function(r){
+          return '<li class="report"><span class="rdot ' + r.type + '"></span><span class="rtext">' + r.text +
+                 '<small>' + agoText(r.mins) + ' · ' + (r.own ? '내 제보' : '예시') + '</small></span></li>';
+        }).join('')
+      : '<li class="report empty">아직 제보가 없어요. 첫 제보를 남겨 보세요.</li>';
+
+    $('#sheetTitle').textContent = p.name;
+    $('#sheetMeta').textContent = p.gu + ' · ' + p.cats.join(' · ');
+    $('#sheetBody').innerHTML =
+      '<p class="mood">' + p.mood + '</p>' +
+      '<div class="status"><span class="pill lv' + lv.key + '">' + lv.name + '</span>' +
+        '<span class="status-text">' + timeName(state.t) + ' · ' + popRange(p, state.t) + (state.t === 0 ? ' 추정' : ' 예상') + '</span></div>' +
+      '<section class="sec"><div class="sec-head"><h3 class="sec-title">앞으로 12시간</h3><span class="hint">막대를 누르면 그 시간으로 바뀌어요</span></div>' +
+        '<div class="chart">' + bars + '</div><div class="ticks" aria-hidden="true">' + ticks + '</div>' +
+        '<p class="reco">' + reco + '</p></section>' +
+      '<section class="sec"><div class="sec-head"><h3 class="sec-title">현장 제보</h3><span class="hint">지금 여기 있다면 알려 주세요</span></div><ul class="reports">' + repHTML + '</ul>' +
+        '<div class="report-actions">' +
+          '<button type="button" class="btn quiet" id="rep-quiet" data-report="quiet">' + REPORT_TYPES.quiet.label + '</button>' +
+          '<button type="button" class="btn seat" id="rep-seat" data-report="seat">' + REPORT_TYPES.seat.label + '</button>' +
+          '<button type="button" class="btn busy" id="rep-busy" data-report="busy">' + REPORT_TYPES.busy.label + '</button>' +
+        '</div><p class="note" id="repNote" aria-live="polite">제보는 이 기기에만 저장되는 데모예요. 실제 앱에선 모두에게 공유돼요.</p></section>';
+  }
+
+  function scrollChip(o){
+    var chip = document.getElementById('t' + o); if (!chip) return;
+    var left = chip.offsetLeft - timeWrap.clientWidth / 2 + chip.offsetWidth / 2;
+    try { timeWrap.scrollTo({ left:left, behavior: reduceMotion ? 'auto' : 'smooth' }); }
+    catch (e) { timeWrap.scrollLeft = left; }
+  }
+
+  function setTime(o){
+    var ae = document.activeElement;
+    var fromBar = ae && ae.classList && ae.classList.contains('bar-btn');
+    state.t = o;
+    render();
+    if (state.open != null) {
+      renderSheet();
+      if (fromBar) { var nb = document.getElementById('bar' + o); if (nb) nb.focus({ preventScroll:true }); }
+    }
+    scrollChip(o);
+  }
+
+  var sheet = $('#sheet'), scrim = $('#scrim');
+  function openSheet(id){
+    state.open = id; state.lastId = id;
+    renderSheet();
+    scrim.hidden = false; sheet.hidden = false;
+    sheet.scrollTop = 0;
+    document.documentElement.classList.add('locked');
+    $('#sheetClose').focus({ preventScroll:true });
+  }
+  function closeSheet(){
+    if (state.open == null) return;
+    state.open = null;
+    sheet.hidden = true; scrim.hidden = true;
+    document.documentElement.classList.remove('locked');
+    var c = document.getElementById('card' + state.lastId);
+    if (c) c.focus({ preventScroll:true });
+  }
+  function addReport(type){
+    var id = state.open; if (id == null) return;
+    mine[id] = (mine[id] || []).concat([{ type:type, ts:Date.now() }]).slice(-5);
+    saveMine();
+    render(); renderSheet();
+    var btn = document.getElementById('rep-' + type);
+    if (btn) btn.focus({ preventScroll:true });
+    var note = document.getElementById('repNote');
+    if (note) note.textContent = '제보했어요. 다른 사람들이 장소 고를 때 참고해요.';
+  }
+
+  list.addEventListener('click', function(e){
+    var c = e.target.closest('.card'); if (c) openSheet(+c.getAttribute('data-id'));
+  });
+  sheet.addEventListener('click', function(e){
+    if (e.target.closest('#sheetClose')) { closeSheet(); return; }
+    var bar = e.target.closest('.bar-btn'); if (bar) { setTime(+bar.getAttribute('data-offset')); return; }
+    var rep = e.target.closest('[data-report]'); if (rep) addReport(rep.getAttribute('data-report'));
+  });
+  scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSheet(); });
+
+  render();
+
+  // 같은 폴더의 data.json(30분마다 갱신)이 있으면 실시간 데이터로 바꾼다
+  try {
+    fetch('data.json', { cache:'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('no data'); return r.json(); })
+      .then(function(data){
+        var live = buildLive(data);
+        if (!live) return;
+        LIVE = live;
+        render();
+        if (state.open != null) renderSheet();
+      })
+      .catch(function(){});
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>
